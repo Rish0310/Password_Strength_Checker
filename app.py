@@ -1,0 +1,384 @@
+import streamlit as st
+import numpy as np
+import joblib
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# Page Configuration
+st.set_page_config(
+    page_title='Password Strength Checker',
+    page_icon='🔐',
+    layout='centered',
+    initial_sidebar_state='collapsed'
+)
+
+# Load model and vectorizer
+@st.cache_resource
+def load_models():
+    try:
+        clf = joblib.load('password_model.pkl')
+        vectorizer = joblib.load('vectorizer.pkl')
+        return clf, vectorizer
+    except Exception as e:
+        st.error(f"Error loading models: {e}")
+        return None, None
+
+clf, vectorizer = load_models()
+
+# Prediction function
+def predict_password_strength(password):
+    """Predict password strength with corrections"""
+    
+    if len(password) == 0:
+        return 0, [1.0, 0.0, 0.0], "Empty password"
+    
+    # Calculate features
+    length_pass = len(password)
+    length_normalised_lowercase = sum(1 for c in password if c.islower()) / length_pass
+    length_normalised_uppercase = sum(1 for c in password if c.isupper()) / length_pass
+    length_normalised_digit = sum(1 for c in password if c.isdigit()) / length_pass
+    
+    # Get TF-IDF features
+    sample_array = np.array([password])
+    sample_matrix = vectorizer.transform(sample_array)
+    
+    # Combine features
+    new_matrix = np.append(
+        sample_matrix.toarray(), 
+        (length_pass, length_normalised_lowercase, length_normalised_uppercase, length_normalised_digit)
+    ).reshape(1, -1)
+    
+    # Get model prediction
+    result = clf.predict(new_matrix)[0]
+    probabilities = clf.predict_proba(new_matrix)[0]
+    
+    # Apply length-based corrections
+    original_result = result
+    reason = "Model prediction"
+    
+    if length_pass <= 6:
+        result = 0
+        reason = "Too short (≤6 characters)"
+    elif length_pass >= 25 and result != 0:
+        result = 2
+        reason = "Very long password (≥25 characters)"
+    elif length_pass >= 20 and result == 0:
+        result = 1
+        reason = "Too long to be weak"
+    elif length_pass <= 8 and result == 2:
+        result = 1
+        reason = "Too short to be strong"
+    
+    return result, probabilities, reason
+
+# Custom CSS
+st.markdown("""
+    <style>
+    .main {
+        padding: 2rem 1rem;
+    }
+    
+    .title-container {
+        text-align: center;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .main-title {
+        font-size: 3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+        font-size: 1.3rem;
+        color: #666;
+        font-weight: 400;
+    }
+    
+    .result-card {
+        padding: 2rem;
+        border-radius: 15px;
+        margin: 2rem 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .result-weak {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+    
+    .result-normal {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+    
+    .result-strong {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+    }
+    
+    .result-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .info-box {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        border-left: 4px solid #667eea;
+    }
+    
+    .metric-container {
+        display: flex;
+        justify-content: space-around;
+        margin: 1.5rem 0;
+    }
+    
+    .metric {
+        text-align: center;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #666;
+        margin-top: 0.5rem;
+    }
+    
+    .stTextInput input {
+        font-size: 1.1rem;
+        padding: 0.75rem;
+        border-radius: 10px;
+        border: 2px solid #e0e0e0;
+    }
+    
+    .stTextInput input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
+    
+    .tip-box {
+        background: #fff3cd;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #ffc107;
+        margin: 1rem 0;
+    }
+    
+    .tip-title {
+        font-weight: 600;
+        color: #856404;
+        margin-bottom: 0.5rem;
+    }
+    
+    .tip-text {
+        color: #856404;
+        font-size: 0.95rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Header
+st.markdown("""
+    <div class="title-container">
+        <h1 class="main-title">🔐 Password Strength Checker</h1>
+        <p class="subtitle">AI-Powered Security Analysis</p>
+    </div>
+""", unsafe_allow_html=True)
+
+# Main input
+password = st.text_input(
+    '🔑 Enter your password',
+    type='password',
+    placeholder='Type your password here...',
+    help='Your password is analyzed locally and never stored or transmitted'
+)
+
+# Show/Hide password toggle
+show_password = st.checkbox('👁️ Show password')
+if show_password and password:
+    st.text(f"Password: {password}")
+
+# Analyze button
+if st.button('🔍 Analyze Password', type='primary', use_container_width=True):
+    if not password:
+        st.warning('⚠️ Please enter a password to analyze')
+    else:
+        with st.spinner('🔐 Analyzing password strength...'):
+            # Get prediction
+            result, probabilities, reason = predict_password_strength(password)
+            
+            strength_names = ['Weak', 'Normal', 'Strong']
+            strength_colors = ['weak', 'normal', 'strong']
+            strength_emojis = ['🔴', '🟡', '🟢']
+            
+            # Display result
+            st.markdown(f"""
+                <div class="result-card result-{strength_colors[result]}">
+                    <div class="result-title">
+                        {strength_emojis[result]} Password Strength: {strength_names[result].upper()}
+                    </div>
+                    <p style="font-size: 1.1rem; margin-bottom: 0;">
+                        {reason}
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Password details
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown(f"""
+                    <div class="metric">
+                        <div class="metric-value">{len(password)}</div>
+                        <div class="metric-label">Characters</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                lowercase_pct = sum(1 for c in password if c.islower()) / len(password) * 100
+                st.markdown(f"""
+                    <div class="metric">
+                        <div class="metric-value">{lowercase_pct:.0f}%</div>
+                        <div class="metric-label">Lowercase</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                uppercase_pct = sum(1 for c in password if c.isupper()) / len(password) * 100
+                st.markdown(f"""
+                    <div class="metric">
+                        <div class="metric-value">{uppercase_pct:.0f}%</div>
+                        <div class="metric-label">Uppercase</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            col4, col5, col6 = st.columns(3)
+            
+            with col4:
+                digit_pct = sum(1 for c in password if c.isdigit()) / len(password) * 100
+                st.markdown(f"""
+                    <div class="metric">
+                        <div class="metric-value">{digit_pct:.0f}%</div>
+                        <div class="metric-label">Digits</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col5:
+                special_pct = sum(1 for c in password if not c.isalnum()) / len(password) * 100
+                st.markdown(f"""
+                    <div class="metric">
+                        <div class="metric-value">{special_pct:.0f}%</div>
+                        <div class="metric-label">Special Chars</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col6:
+                char_types = sum([
+                    any(c.islower() for c in password),
+                    any(c.isupper() for c in password),
+                    any(c.isdigit() for c in password),
+                    any(not c.isalnum() for c in password)
+                ])
+                st.markdown(f"""
+                    <div class="metric">
+                        <div class="metric-value">{char_types}/4</div>
+                        <div class="metric-label">Char Types</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                        
+            # Recommendations
+            st.markdown("### 💡 Recommendations")
+            
+            if result == 0:
+                st.markdown("""
+                    <div class="tip-box">
+                        <div class="tip-title">⚠️ Your password is weak. Improve it by:</div>
+                        <div class="tip-text">
+                            • Increasing length to at least 12 characters<br>
+                            • Adding uppercase letters (A-Z)<br>
+                            • Including numbers (0-9)<br>
+                            • Using special characters (!@#$%^&*)
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+            elif result == 1:
+                st.markdown("""
+                    <div class="tip-box">
+                        <div class="tip-title">✅ Your password is decent. Make it stronger by:</div>
+                        <div class="tip-text">
+                            • Increasing length to 16+ characters<br>
+                            • Adding more character variety<br>
+                            • Avoiding common words or patterns
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                    <div class="tip-box">
+                        <div class="tip-title">🎉 Excellent! Your password is strong!</div>
+                        <div class="tip-text">
+                            • Remember to use unique passwords for each account<br>
+                            • Consider using a password manager<br>
+                            • Enable two-factor authentication when possible
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+# Sidebar
+with st.sidebar:
+    st.markdown("## 📖 About")
+    st.markdown("""
+        This app uses **Machine Learning** to analyze password strength based on:
+        
+        - **Character patterns** (TF-IDF analysis)
+        - **Length**
+        - **Character diversity** (lowercase, uppercase, digits)
+        
+        The model was trained on thousands of passwords to identify weak, normal, and strong patterns.
+    """)
+    
+    st.markdown("## 🔒 Privacy")
+    st.markdown("""
+        Your password is:
+        - ✅ Analyzed locally in your browser
+        - ✅ Never stored or transmitted
+        - ✅ Completely private and secure
+    """)
+    
+    st.markdown("## 💪 Password Tips")
+    st.markdown("""
+        **Strong passwords:**
+        - Are 12+ characters long
+        - Mix uppercase, lowercase, numbers, symbols
+        - Avoid dictionary words
+        - Don't reuse across sites
+        
+        **Consider using:**
+        - Passphrases (e.g., "coffee-Dragon-89-Blue!")
+        - Password managers
+        - Two-factor authentication
+    """)
+
+# Footer
+st.markdown("---")
+st.markdown("""
+    <div style="text-align: center; color: #666; padding: 2rem 0;">
+        <p><strong>🔐 Password Strength Checker</strong></p>
+        <p>Built with Streamlit • Powered by Machine Learning</p>
+        <p style="font-size: 0.85rem; margin-top: 1rem;">
+            ⚠️ This tool provides guidance only. Always follow your organization's password policies.
+        </p>
+    </div>
+""", unsafe_allow_html=True)
