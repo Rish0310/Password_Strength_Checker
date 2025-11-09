@@ -7,6 +7,7 @@ An AI-powered password strength analyzer built with Machine Learning and Streaml
 - Real-time password strength analysis
 - Character diversity metrics
 - ML-based pattern recognition
+- Privacy-focused (no data transmission)
 
 ## Tech Stack
 
@@ -37,3 +38,4 @@ streamlit run app.py
 
 
 Deployed on Streamlit Cloud!
+
