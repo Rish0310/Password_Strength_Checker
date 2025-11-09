@@ -7,11 +7,10 @@ An AI-powered password strength analyzer built with Machine Learning and Streaml
 - Real-time password strength analysis
 - Character diversity metrics
 - ML-based pattern recognition
-- Privacy-focused (no data transmission)
 
 ## Tech Stack
 
-- **Python 3.x**
+- **Python 3.12**
 - **Streamlit** - Web interface
 - **scikit-learn** - Machine learning
 - **Logistic Regression** - Classification model
@@ -30,10 +29,11 @@ streamlit run app.py
 ## Model Details
 
 - **Algorithm**: Logistic Regression with class balancing
-- **Features**: TF-IDF (100) + Length + Character frequencies (4)
+- **Features**: TF-IDF (99) + Length + Character frequencies (3)
 - **Classes**: Weak (0), Normal (1), Strong (2)
 - **Corrections**: Length-based adjustments for edge cases
 
 ## Deployment
 
-Deploy on Streamlit Cloud for free!
+
+Deployed on Streamlit Cloud!
