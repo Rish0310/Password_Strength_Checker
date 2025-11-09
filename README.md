@@ -2,7 +2,7 @@
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://passwordstrengthchecker-bxvjgmavk4zsafrc5blxnp.streamlit.app/)
 
-**AI-Powered Security Analysis with Machine Learning**
+**Password Security Analysis using Machine Learning and TF-IDF**
 
 🌐 **[Try Live Demo →](https://passwordstrengthchecker-bxvjgmavk4zsafrc5blxnp.streamlit.app/)**
 
@@ -44,6 +44,7 @@ streamlit run app.py
 
 
 Deployed on Streamlit Cloud!
+
 
 
 
