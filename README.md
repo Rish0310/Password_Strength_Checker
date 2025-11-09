@@ -2,6 +2,16 @@
 
 An AI-powered password strength analyzer built with Machine Learning and Streamlit.
 
+# 🔐 Password Strength Checker
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://passwordstrengthchecker-bxvjgmavk4zsafrc5blxnp.streamlit.app/)
+
+**AI-Powered Security Analysis with Machine Learning**
+
+🌐 **[Try Live Demo →](https://passwordstrengthchecker-bxvjgmavk4zsafrc5blxnp.streamlit.app/)**
+
+---
+
 ## Features
 
 - Real-time password strength analysis
@@ -38,4 +48,5 @@ streamlit run app.py
 
 
 Deployed on Streamlit Cloud!
+
 
